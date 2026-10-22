@@ -1,0 +1,105 @@
+﻿@page "/user"
+@using ApiContracts
+@using BlazorApp.Services
+@inject IUserService UserService
+
+<h3>User Management</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="card mb-4 p-3">
+    <h4>Create a New User</h4>
+    <EditForm Model="newUser" OnValidSubmit="HandleCreateUser" FormName="CreateUserForm">
+        <div class="mb-3">
+            <label class="form-label">Username:</label>
+            <InputText class="form-control" @bind-Value="newUser.UserName" />
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Password:</label>
+            <InputText type="password" class="form-control" @bind-Value="newUser.Password" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create User</button>
+    </EditForm>
+</div>
+
+<h4>All Users</h4>
+@if (users == null)
+{
+    <p><em>Loading users...</em></p>
+}
+else if (!users.Any())
+{
+    <p>No users found.</p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var user in users)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><strong>User ID:</strong> @user.Id - @user.UserName</span>
+                <div>
+                    <a href="/user/edit/@user.Id" class="btn btn-sm btn-outline-primary me-2">Edit</a>
+                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(user.Id)">Delete</button>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private IEnumerable<UserDto>? users;
+    private UserDto newUser = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            users = await UserService.GetUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading users: {ex.Message}";
+        }
+    }
+
+    private async Task HandleCreateUser()
+    {
+        errorMessage = null;
+        try
+        {
+            await UserService.AddUserAsync(newUser);
+            newUser = new(); // Reset form
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating user: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteUser(int id)
+    {
+        errorMessage = null;
+        try
+        {
+            await UserService.DeleteUserAsync(id);
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting user: {ex.Message}";
+        }
+    }
+}

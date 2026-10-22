@@ -7,19 +7,20 @@ using RepositoryContracts;
 namespace Web_API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class PostController : ControllerBase
 {
     private readonly IPostRepository postRepo;
     private readonly IUserRepository userRepo;
 
-    public PostController(IPostRepository postRepo)
+    public PostController(IPostRepository postRepo, IUserRepository userRepo)
     {
         this.postRepo = postRepo;
+        this.userRepo = userRepo;
     }
 
     [HttpPost]
-    public async Task<ActionResult<PostDto>> AddPost([FromBody] CreatePostDto request)
+    public async Task<ActionResult<PostDto>> AddPost([FromBody] PostDto request)
     {
         await VerifyUserExistAsync(request.UserId);
 
@@ -34,7 +35,7 @@ public class PostController : ControllerBase
             UserId = created.UserId
         };
 
-        return CreatedAtAction(nameof(GetSingleAsync), new { id = dto.Id }, dto);
+        return CreatedAtRoute("GetSinglePost", new { id = dto.Id }, dto);
     }
     
     [HttpGet("{id:int}", Name = "GetSinglePost")]
@@ -67,7 +68,7 @@ public class PostController : ControllerBase
 
         await postRepo.UpdateAsync(existingPost);
 
-        return NoContent();
+        return Ok(dto);
     }
 
     [HttpDelete("{id:int}", Name = "DeletePost")]
@@ -80,11 +81,8 @@ public class PostController : ControllerBase
         return NoContent();
     }
 
-    [HttpGet(Name = "GetManyPosts")]
-    public async Task<IActionResult> GetManyAsync(
-        [FromQuery] int? userId,
-        [FromQuery] string? userName,
-        [FromQuery] string? titleContains)
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<PostDto>>> GetManyAsync([FromQuery] int? userId)
     {
         IQueryable<Post> query = postRepo.GetMany();
 
@@ -93,44 +91,17 @@ public class PostController : ControllerBase
             query = query.Where(p => p.UserId == userId.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(userName))
-        {
-            var matchingUserIds = userRepo.GetMany()
-                .Where(u => u.Username.Contains(userName, StringComparison.OrdinalIgnoreCase))
-                .Select(u => u.Id);
-
-            query = query.Where(p => matchingUserIds.Contains(p.UserId));
-        }
-        if (!string.IsNullOrWhiteSpace(titleContains))
-        {
-            query = query.Where(p => p.Title.Contains(titleContains, StringComparison.OrdinalIgnoreCase));
-        }
-
-        List<Post> posts = query.ToList();
-
-        var response = new
-        {
-            posts = posts.Select(p => new
+        var postDtos = query.ToList()
+            .Select(p => new PostDto
             {
-                p.Id,
-                p.Title,
-                p.Body,
-                p.UserId,
-                links = new[]
-                {
-                    new { href = Url.Link("GetSinglePost", new { id = p.Id }), rel = "self", method = "GET" },
-                    new { href = Url.Link("UpdatePost", new { id = p.Id }), rel = "update", method = "PUT" },
-                    new { href = Url.Link("DeletePost", new { id = p.Id }), rel = "delete", method = "DELETE" }
-                }
-            }),
-            links = new[]
-            {
-                new { href = Url.Link("GetManyPosts", null), rel = "self", method = "GET" },
-                new { href = Url.Link("AddPost", null), rel = "create", method = "POST" }
-            }
-        };
+                Id = p.Id,
+                Title = p.Title,
+                Body = p.Body,
+                UserId = p.UserId
+            })
+            .ToList();
 
-        return Ok(response);
+        return Ok(postDtos);
     }
 
     private async Task VerifyUserExistAsync(int userId)

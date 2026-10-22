@@ -1,0 +1,99 @@
+﻿@page "/post/{id:int}"
+@using ApiContracts
+@using BlazorApp.Services
+@inject IPostService PostService
+@inject ICommentService CommentService
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+        <a href="/post" class="btn btn-outline-secondary">← Back to All Posts</a>
+    }
+    else if (post == null)
+    {
+        <p><em>Loading post details...</em></p>
+    }
+    else
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="card-title text-primary">@post.Title</h2>
+                <h6 class="card-subtitle mb-3 text-muted">Author ID: @post.UserId | Post ID: @post.Id</h6>
+                <hr />
+                <p class="card-text fs-5" style="white-space: pre-wrap;">@post.Body</p>
+            </div>
+            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                <a href="/post" class="btn btn-outline-secondary">← Back to Posts</a>
+                <div>
+                    <a href="/post/edit/@post.Id" class="btn btn-primary me-2">Edit Post</a>
+                    <button class="btn btn-danger" @onclick="DeletePost">Delete Post</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm p-3">
+            <h4>Comments for this Post</h4>
+            
+            @if (comments == null)
+            {
+                <p><em>Loading comments...</em></p>
+            }
+            else if (!comments.Any())
+            {
+                <p class="text-muted">No comments on this post yet.</p>
+            }
+            else
+            {
+                <ul class="list-group">
+                    @foreach (var comment in comments)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-secondary me-2">Comment ID: @comment.Id</span>
+                                <span class="badge bg-info text-dark me-2">User ID: @comment.UserId</span>
+                                <p class="mb-0 mt-1">@comment.Body</p>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+
+    private PostDto? post;
+    private IEnumerable<CommentDto>? comments;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            post = await PostService.GetPostAsync(id);
+            comments = await CommentService.GetCommentsByPostIdAsync(id);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not load post or comments: {ex.Message}";
+        }
+    }
+
+    private async Task DeletePost()
+    {
+        try
+        {
+            await PostService.DeletePostAsync(id);
+            Navigation.NavigateTo("/post");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting post: {ex.Message}";
+        }
+    }
+}

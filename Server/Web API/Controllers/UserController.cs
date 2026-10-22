@@ -7,7 +7,7 @@ using RepositoryContracts;
 namespace Web_API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class UserController : ControllerBase
 {
     private readonly IUserRepository userRepo;
@@ -46,35 +46,30 @@ public class UserController : ControllerBase
         return Ok(dto);
     }
 
-    [HttpPut("{id:int}", Name = "UpdateUser")]
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        await userRepo.DeleteAsync(id);
+        return NoContent();
+    }
+
+    [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDto dto)
     {
         if (id != dto.Id)
         {
-            return BadRequest(new { error = "Route ID does not match body ID." });
+            return BadRequest("ID mismatch.");
         }
 
         User existingUser = await userRepo.GetSingleAsync(id);
-
         existingUser.Username = dto.UserName;
 
         await userRepo.UpdateAsync(existingUser);
-
-        return NoContent();
+        return Ok(dto);
     }
     
-    [HttpDelete("{id:int}", Name = "DeleteUser")]
-    public async Task<IActionResult> DeleteUser(int id)
-    {
-        User user = await userRepo.GetSingleAsync(id);
-
-        await userRepo.DeleteAsync(user.Id);
-
-        return NoContent();
-    }
-    
-    [HttpGet(Name = "GetManyUsers")]
-    public async Task<IActionResult> GetManyAsync([FromQuery] string? usernameContains)
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetManyAsync([FromQuery] string? usernameContains)
     {
         IQueryable<User> query = userRepo.GetMany();
 
@@ -83,31 +78,15 @@ public class UserController : ControllerBase
             query = query.Where(u => u.Username.Contains(usernameContains, StringComparison.OrdinalIgnoreCase));
         }
 
-        List<User> users = query.ToList();
-
-        var response = new
-        {
-            users = users.Select(u => new
+        var userDtos = query.ToList()
+            .Select(u => new UserDto
             {
-                u.Id,
-                u.Username,
-                links = new[]
-                {
-                    new { href = Url.Link("GetSingleUser", new { id = u.Id }), rel = "self", method = "GET" },
-                    new { href = Url.Link("UpdateUser", new { id = u.Id }), rel = "update", method = "PUT" },
-                    new { href = Url.Link("DeleteUser", new { id = u.Id }), rel = "delete", method = "DELETE" },
-                    new { href = Url.Link("GetManyPosts", new { userId = u.Id }), rel = "posts", method = "GET" },
-                    new { href = Url.Link("GetManyComments", new { userId = u.Id }), rel = "comments", method = "GET" }
-                }
-            }),
-            links = new[]
-            {
-                new { href = Url.Link("GetManyUsers", null), rel = "self", method = "GET" },
-                new { href = Url.Link("AddUser", null), rel = "create", method = "POST" }
-            }
-        };
+                Id = u.Id,
+                UserName = u.Username
+            })
+            .ToList();
 
-        return Ok(response);
+        return Ok(userDtos);
     }
 
     private async Task VerifyUserNameIsAvailableAsync(string userName)

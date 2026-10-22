@@ -7,19 +7,21 @@ using RepositoryContracts;
 namespace Web_API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class CommentController : ControllerBase
 {
     private readonly ICommentRepository commentRepo;
     private readonly IUserRepository userRepo;
     private readonly IPostRepository postRepo;
 
-    public CommentController(ICommentRepository commentRepo)
+    public CommentController(ICommentRepository commentRepo, IUserRepository userRepo, IPostRepository postRepo)
     {
         this.commentRepo = commentRepo;
+        this.userRepo = userRepo;
+        this.postRepo = postRepo;
     }
 
-    [HttpPost]
+    [HttpPost(Name = "AddComment")]
     public async Task<ActionResult<CommentDto>> AddComment([FromBody] CreateCommentDto request)
     {
         await VerifyPostAndUserExistAsync(request.PostId, request.UserId);
@@ -35,7 +37,7 @@ public class CommentController : ControllerBase
             UserId = created.UserId
         };
 
-        return Created($"/Comments/{dto.Id}", dto);
+        return CreatedAtRoute("GetSingleComment", new { id = dto.Id }, dto);
     }
 
     [HttpGet("{id:int}", Name = "GetSingleComment")]
@@ -66,7 +68,7 @@ public class CommentController : ControllerBase
         existingComment.Body = dto.Body;
         await commentRepo.UpdateAsync(existingComment);
 
-        return NoContent();
+        return Ok(dto);
     }
 
     [HttpDelete("{id:int}", Name = "DeleteComment")]
@@ -80,7 +82,7 @@ public class CommentController : ControllerBase
     }
 
     [HttpGet(Name = "GetManyComments")]
-    public async Task<IActionResult> GetManyAsync(
+    public async Task<ActionResult<IEnumerable<CommentDto>>> GetManyAsync(
         [FromQuery] int? postId,
         [FromQuery] int? userId,
         [FromQuery] string? userName)
@@ -108,31 +110,16 @@ public class CommentController : ControllerBase
 
         List<Comment> comments = query.ToList();
 
-        var response = new
+        List<CommentDto> dtos = comments.Select(c => new CommentDto()
         {
-            comments = comments.Select(c => new
-            {
-                c.Id,
-                c.Body,
-                c.PostId,
-                c.UserId,
-                links = new[]
-                {
-                    new { href = Url.Link("GetSingleComment", new { id = c.Id }), rel = "self", method = "GET" },
-                    new { href = Url.Link("UpdateComment", new { id = c.Id }), rel = "update", method = "PUT" },
-                    new { href = Url.Link("DeleteComment", new { id = c.Id }), rel = "delete", method = "DELETE" }
-                }
-            }),
-            links = new[]
-            {
-                new { href = Url.Link("GetManyComments", null), rel = "self", method = "GET" },
-                new { href = Url.Link("AddComment", null), rel = "create", method = "POST" }
-            }
-        };
+            Id = c.Id,
+            Body = c.Body,
+            PostId = c.PostId,
+            UserId = c.UserId
+        }).ToList();
 
-        return Ok(response);
+        return Ok(dtos);
     }
-
     private async Task VerifyPostAndUserExistAsync(int postId, int userId)
     {
         await postRepo.GetSingleAsync(postId);

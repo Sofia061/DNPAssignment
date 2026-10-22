@@ -1,0 +1,119 @@
+﻿@page "/post"
+@using ApiContracts
+@using BlazorApp.Services
+@inject IPostService PostService
+
+<h3>Posts Feed</h3>
+
+<div class="card mb-4 p-3">
+    <h4>Create a New Post</h4>
+    <EditForm Model="newPost" OnValidSubmit="HandleCreatePost" FormName="CreatePostForm">
+        <div class="mb-3">
+            <label class="form-label">Title:</label>
+            <InputText class="form-control" @bind-Value="newPost.Title" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Body:</label>
+            <InputTextArea class="form-control" @bind-Value="newPost.Body" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">User ID (Author):</label>
+            <InputNumber class="form-control" @bind-Value="newPost.UserId" min="0" />
+        </div>
+        <button type="submit" class="btn btn-primary">Create Post</button>
+    </EditForm>
+</div>
+
+<h4>All Posts</h4>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (posts == null)
+{
+    <p><em>Loading posts...</em></p>
+}
+else if (!posts.Any())
+{
+    <p>No posts available.</p>
+}
+else
+{
+    <div class="d-flex flex-column gap-2">
+        @foreach (var post in posts)
+        {
+            <div class="card p-3 shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-secondary me-2">Post ID: @post.Id</span>
+                        <a href="/post/@post.Id" class="text-decoration-none fw-bold fs-5">@post.Title</a>
+                        <span class="badge bg-info text-dark ms-2">Author ID: @post.UserId</span>
+                    </div>
+                    <div>
+                        <a href="/post/edit/@post.Id" class="btn btn-sm btn-outline-primary me-2">Edit</a>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeletePostAsync(post.Id)">Delete</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private IEnumerable<PostDto>? posts;
+    private PostDto newPost = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPosts();
+    }
+
+    private async Task LoadPosts()
+    {
+        try
+        {
+            posts = await PostService.GetPostsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading posts: {ex.Message}";
+        }
+    }
+
+    private async Task HandleCreatePost()
+    {
+        errorMessage = null;
+        if (newPost.UserId < 0 || newPost.Id < 0)
+        {
+            errorMessage = "IDs cannot be less than 0.";
+            return;
+        }
+        try
+        {
+            await PostService.CreatePostAsync(newPost);
+            newPost = new();
+            await LoadPosts();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not create post: {ex.Message}";
+        }
+    }
+
+    private async Task DeletePostAsync(int id)
+    {
+        errorMessage = null;
+        try
+        {
+            await PostService.DeletePostAsync(id);
+            await LoadPosts();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting post: {ex.Message}";
+        }
+    }
+}

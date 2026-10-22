@@ -1,0 +1,117 @@
+﻿@page "/comment"
+@using ApiContracts
+@using BlazorApp.Services
+@inject ICommentService CommentService
+
+<h3>Comments Management</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<!-- Create Comment Form -->
+<div class="card mb-4 p-3">
+    <h4>Add a New Comment</h4>
+    <EditForm Model="newComment" OnValidSubmit="HandleCreateComment" FormName="CreateCommentForm">
+        <div class="mb-3">
+            <label class="form-label">Body:</label>
+            <InputTextArea class="form-control" @bind-Value="newComment.Body" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Post ID:</label>
+            <InputNumber class="form-control" @bind-Value="newComment.PostId" min="0" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">User ID:</label>
+            <InputNumber class="form-control" @bind-Value="newComment.UserId" min="0" />
+        </div>
+        <button type="submit" class="btn btn-primary">Create Comment</button>
+    </EditForm>
+</div>
+
+<!-- Comments List -->
+<h4>All Comments</h4>
+@if (comments == null)
+{
+    <p><em>Loading comments...</em></p>
+}
+else if (!comments.Any())
+{
+    <p>No comments available.</p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var comment in comments)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="mb-1">@comment.Body</p>
+                    <small class="text-muted">Post ID: @comment.PostId | User ID: @comment.UserId</small>
+                </div>
+                <div>
+                    <a href="/comment/edit/@comment.Id" class="btn btn-sm btn-outline-primary me-2">Edit</a>
+                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteComment(comment.Id)">Delete</button>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private IEnumerable<CommentDto>? comments;
+    private CommentDto newComment = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadComments();
+    }
+
+    private async Task LoadComments()
+    {
+        try
+        {
+            comments = await CommentService.GetCommentsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading comments: {ex.Message}";
+        }
+    }
+
+    private async Task HandleCreateComment()
+    {
+        errorMessage = null;
+        if (newComment.UserId < 0 || newComment.PostId < 0)
+        {
+            errorMessage = "IDs cannot be less than 0.";
+            return;
+        }
+        try
+        {
+            await CommentService.CreateCommentAsync(newComment);
+            newComment = new();
+            await LoadComments();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating comment: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteComment(int id)
+    {
+        errorMessage = null;
+        try
+        {
+            await CommentService.DeleteCommentAsync(id);
+            await LoadComments();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting comment: {ex.Message}";
+        }
+    }
+}
