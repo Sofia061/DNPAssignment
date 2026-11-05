@@ -1,4 +1,7 @@
 ﻿@page "/comment"
+@attribute [Authorize]
+@using System.Linq
+@using System.Collections.Generic
 @using ApiContracts
 @using BlazorApp.Services
 @inject ICommentService CommentService
@@ -61,7 +64,7 @@ else
 
 @code {
     private IEnumerable<CommentDto>? comments;
-    private CommentDto newComment = new();
+    private CommentDto newComment = new CommentDto();
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -92,7 +95,7 @@ else
         try
         {
             await CommentService.CreateCommentAsync(newComment);
-            newComment = new();
+            newComment = new CommentDto();
             await LoadComments();
         }
         catch (Exception ex)

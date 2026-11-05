@@ -1,0 +1,91 @@
+@page "/Login"
+@using BlazorApp.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager navMgr
+@inject HttpClient http
+
+<h3>This is where you login</h3>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <h3>Please login</h3>
+        <div class="mb-2">
+            <label class="form-label">User name:</label>
+            <input type="text" class="form-control" style="max-width: 300px"
+                   @bind="userName" @bind:event="oninput" @onkeydown="OnKeyDown"/>
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Password:</label>
+            <input type="password" class="form-control" style="max-width: 300px"
+                   @bind="password" @bind:event="oninput" @onkeydown="OnKeyDown"/>
+        </div>
+        @if (!string.IsNullOrEmpty(errorLabel))
+        {
+            <div class="alert alert-danger" style="max-width: 500px">@errorLabel</div>
+        }
+        <button class="btn btn-primary" disabled="@busy" @onclick="LoginAsync">Log in</button>
+    </NotAuthorized>
+    <Authorized>
+        <div class="alert alert-success">Login successful! You are logged in as <strong>@context.User.Identity?.Name</strong>.</div>
+        <button class="btn btn-secondary" @onclick="Logout">Log out</button>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private string userName = "";
+    private string password = "";
+    private string errorLabel = "";
+    private bool busy;
+
+    private async Task Logout()
+    {
+        await ((SimpleAuthProvider)AuthProvider).Logout();
+        userName = "";
+        password = "";
+        errorLabel = "";
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoginAsync();
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        if (busy) return;
+
+        errorLabel = "";
+
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrEmpty(password))
+        {
+            errorLabel = "Please enter both a user name and a password.";
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            await ((SimpleAuthProvider)AuthProvider).Login(userName.Trim(), password);
+            navMgr.NavigateTo("/");
+        }
+        catch (HttpRequestException e)
+        {
+            Console.WriteLine(e);
+            errorLabel = $"Cannot reach the API at {http.BaseAddress}. Is the Web API running? ({e.Message})";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            errorLabel = e.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

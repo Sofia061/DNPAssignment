@@ -1,6 +1,5 @@
 ﻿using ApiContracts;
 using Entities;
-using FileRepositories;
 using Microsoft.AspNetCore.Mvc;
 using RepositoryContracts;
 
@@ -29,7 +28,7 @@ public class UserController : ControllerBase
             Id = created.Id,
             UserName = created.Username
         };
-        return Created($"/Users/{dto.Id}", created);
+        return Created($"/api/user/{dto.Id}", dto);
     }
 
     [HttpGet("{id:int}", Name = "GetSingleUser")]

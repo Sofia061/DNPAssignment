@@ -1,4 +1,4 @@
-﻿namespace Web_API.Middleware;
+namespace Web_API.Middleware;
 
 public class GlobalExceptionHandler
 {
@@ -17,7 +17,19 @@ public class GlobalExceptionHandler
         }
         catch (Exception e)
         {
-            context.Response.StatusCode = 500;
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
+            context.Response.StatusCode = e switch
+            {
+                KeyNotFoundException => StatusCodes.Status404NotFound,
+                InvalidOperationException => StatusCodes.Status409Conflict,
+                ArgumentException => StatusCodes.Status400BadRequest,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
             await context.Response.WriteAsync(e.Message);
         }
     }

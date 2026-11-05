@@ -1,4 +1,7 @@
 ﻿@page "/user"
+@attribute [Authorize]
+@using System.Linq
+@using System.Collections.Generic
 @using ApiContracts
 @using BlazorApp.Services
 @inject IUserService UserService
@@ -54,7 +57,7 @@ else
 
 @code {
     private IEnumerable<UserDto>? users;
-    private UserDto newUser = new();
+    private UserDto newUser = new UserDto(); // Uses UserDto directly
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -80,7 +83,7 @@ else
         try
         {
             await UserService.AddUserAsync(newUser);
-            newUser = new(); // Reset form
+            newUser = new UserDto(); // Reset form
             await LoadUsers();
         }
         catch (Exception ex)
