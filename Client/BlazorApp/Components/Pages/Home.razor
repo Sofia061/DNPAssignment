@@ -1,0 +1,19 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+@page "/"
+@inject NavigationManager NavMgr
+<PageTitle>Home</PageTitle>
+
+<h1>Reddit Clone</h1>
+
+<AuthorizeView Context="authContext">
+    <Authorized>
+        <h3>Hello, @authContext.User.Identity?.Name</h3>
+    </Authorized>
+    <NotAuthorized>
+        lol you are not logged in!
+    </NotAuthorized>
+</AuthorizeView>
+
+<p>Here you can browse interesting posts.</p>
+<button @onclick='() => NavMgr.NavigateTo("login")'>go to login</button>
