@@ -1,3 +1,5 @@
+using RepositoryContracts;
+
 namespace Web_API.Middleware;
 
 public class GlobalExceptionHandler
@@ -24,6 +26,7 @@ public class GlobalExceptionHandler
 
             context.Response.StatusCode = e switch
             {
+                NotFoundException => StatusCodes.Status404NotFound,
                 KeyNotFoundException => StatusCodes.Status404NotFound,
                 InvalidOperationException => StatusCodes.Status409Conflict,
                 ArgumentException => StatusCodes.Status400BadRequest,

@@ -1,6 +1,7 @@
 ﻿using ApiContracts;
 using Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContracts;
 
 namespace Web_API.Controllers;
@@ -74,10 +75,12 @@ public class UserController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(usernameContains))
         {
-            query = query.Where(u => u.Username.Contains(usernameContains, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(u => u.Username.ToLower().Contains(usernameContains.ToLower()));
         }
 
-        var userDtos = query.ToList()
+        var users = await query.ToListAsync();
+
+        var userDtos = users
             .Select(u => new UserDto
             {
                 Id = u.Id,
@@ -90,14 +93,12 @@ public class UserController : ControllerBase
 
     private async Task VerifyUserNameIsAvailableAsync(string userName)
     {
-        bool exists = userRepo.GetMany()
-            .Any(u => u.Username.Equals(userName, StringComparison.OrdinalIgnoreCase));
+        bool exists = await userRepo.GetMany()
+            .AnyAsync(u => u.Username.ToLower() == userName.ToLower());
 
         if (exists)
         {
             throw new InvalidOperationException($"Username '{userName}' is already taken.");
         }
-
-        await Task.CompletedTask;
     }
 }

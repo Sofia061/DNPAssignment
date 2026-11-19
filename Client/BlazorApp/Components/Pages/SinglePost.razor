@@ -3,7 +3,6 @@
 @using ApiContracts
 @using BlazorApp.Services
 @inject IPostService PostService
-@inject ICommentService CommentService
 @inject NavigationManager Navigation
 
 <div class="container mt-4">
@@ -21,7 +20,9 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <h2 class="card-title text-primary">@post.Title</h2>
-                <h6 class="card-subtitle mb-3 text-muted">Author ID: @post.UserId | Post ID: @post.Id</h6>
+                <h6 class="card-subtitle mb-3 text-muted">
+                    Author: @(post.Author?.UserName ?? $"User #{post.UserId}") | Post ID: @post.Id
+                </h6>
                 <hr />
                 <p class="card-text fs-5" style="white-space: pre-wrap;">@post.Body</p>
             </div>
@@ -36,19 +37,15 @@
 
         <div class="card shadow-sm p-3">
             <h4>Comments for this Post</h4>
-            
-            @if (comments == null)
-            {
-                <p><em>Loading comments...</em></p>
-            }
-            else if (!comments.Any())
+
+            @if (!post.Comments.Any())
             {
                 <p class="text-muted">No comments on this post yet.</p>
             }
             else
             {
                 <ul class="list-group">
-                    @foreach (var comment in comments)
+                    @foreach (var comment in post.Comments)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
@@ -69,15 +66,13 @@
     public int id { get; set; }
 
     private PostDto? post;
-    private IEnumerable<CommentDto>? comments;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            post = await PostService.GetPostAsync(id);
-            comments = await CommentService.GetCommentsByPostIdAsync(id);
+            post = await PostService.GetPostAsync(id, includeAuthor: true, includeComments: true);
         }
         catch (Exception ex)
         {

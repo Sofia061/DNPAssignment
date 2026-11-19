@@ -3,9 +3,14 @@
 public class User
 {
     public int Id { get; set; }
-    public string Username { get; set; }
-    public string Password { get; set; }
-    
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+
+    public List<Post> Posts { get; set; } = new();
+    public List<Comment> Comments { get; set; } = new();
+
+    private User() { }
+
     public User(string userName, string password)
     {
         Username = userName;

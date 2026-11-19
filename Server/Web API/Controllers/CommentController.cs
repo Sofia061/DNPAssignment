@@ -2,6 +2,7 @@
 using Entities;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContracts;
 
 namespace Web_API.Controllers;
@@ -101,14 +102,15 @@ public class CommentController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(userName))
         {
-            var matchingUserIds = userRepo.GetMany()
-                .Where(u => u.Username.Contains(userName, StringComparison.OrdinalIgnoreCase))
-                .Select(u => u.Id);
+            var matchingUserIds = await userRepo.GetMany()
+                .Where(u => u.Username.ToLower().Contains(userName.ToLower()))
+                .Select(u => u.Id)
+                .ToListAsync();
 
             query = query.Where(c => matchingUserIds.Contains(c.UserId));
         }
 
-        List<Comment> comments = query.ToList();
+        List<Comment> comments = await query.ToListAsync();
 
         List<CommentDto> dtos = comments.Select(c => new CommentDto()
         {

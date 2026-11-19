@@ -1,3 +1,4 @@
+using EfcRepositories;
 using FileRepositories;
 using RepositoryContracts;
 using Web_API.Middleware;
@@ -24,9 +25,10 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        builder.Services.AddScoped<IUserRepository, UserFileRepository>();
-        builder.Services.AddScoped<IPostRepository, PostFileRepository>();
-        builder.Services.AddScoped<ICommentRepository, CommentFileRepository>();
+        builder.Services.AddDbContext<EfcRepositories.AppContext>();
+        builder.Services.AddScoped<IUserRepository, EfcUserRepository>();
+        builder.Services.AddScoped<IPostRepository, EfcPostRepository>();
+        builder.Services.AddScoped<ICommentRepository, EfcCommentRepository>();
 
         var app = builder.Build();
 
